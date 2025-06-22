@@ -1,0 +1,16 @@
+name = "asyncapi-validator"
+compatibility_date = "2024-01-01"
+
+[build]
+command = "npm run build"
+directory = ".next"
+
+[build.environment]
+NODE_VERSION = "18"
+
+[[env.vars]]
+NODE_ENV = "production"
+
+# Cloudflare Pages build settings
+[functions]
+directory = ".next/server/functions"

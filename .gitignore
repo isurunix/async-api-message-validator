@@ -4,6 +4,7 @@
 # Build output
 /playwright-report
 /test-results
+/.next
 
 # IDE Configurations
 /.vscode
