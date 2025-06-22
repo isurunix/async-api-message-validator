@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AsyncAPI Message Validator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.47.0/min/vs/loader.min.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#eff6ff',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        #editor-container {
+            height: 400px;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.375rem;
+        }
+        
+        .dark #editor-container {
+            border-color: #374151;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 min-h-screen flex flex-col">
+    <!-- Header -->
+    <header class="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-4">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-check-circle text-primary-600 text-2xl"></i>
+                    </div>
+                    <div class="ml-3">
+                        <h1 class="text-xl font-semibold text-gray-900 dark:text-white">AsyncAPI Message Validator</h1>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Validate your AsyncAPI message payloads with ease</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button id="themeToggle" 
+                            class="p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-200 dark:focus:ring-gray-700">
+                        <i class="fas fa-sun text-lg hidden dark:inline"></i>
+                        <i class="fas fa-moon text-lg inline dark:hidden"></i>
+                    </button>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">
+                        <i class="fas fa-circle text-green-400 mr-1"></i>
+                        Connected
+                    </span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Left Panel - Schema & Message Selection -->
+            <div class="lg:col-span-1 space-y-6">
+                <!-- Schema Loading Card -->
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+                    <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                        <h2 class="text-lg font-medium text-gray-900 dark:text-white flex items-center">
+                            <i class="fas fa-cloud-download-alt text-primary-500 mr-2"></i>
+                            Load AsyncAPI Schema
+                        </h2>
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Load a custom schema from GitHub or use the default</p>
+                    </div>
+                    <div class="px-6 py-4 space-y-4">
+                        <div>
+                            <label for="schemaUrl" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Schema URL (GitHub Raw Link)
+                            </label>
+                            <input type="url" 
+                                   id="schemaUrl" 
+                                   placeholder="https://raw.githubusercontent.com/user/repo/main/schema.yaml"
+                                   onkeypress="handleSchemaUrlKeyPress(event)"
+                                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 text-gray-900 dark:text-white text-sm">
+                            <div class="mt-2">
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Example URLs:</p>
+                                <div class="flex flex-wrap gap-1">
+                                    <button type="button" 
+                                            onclick="fillExampleUrl('https://raw.githubusercontent.com/asyncapi/spec/master/examples/streetlights-kafka.yml')"
+                                            class="text-xs px-2 py-1 bg-blue-50 dark:bg-blue-900 text-blue-600 dark:text-blue-300 rounded hover:bg-blue-100 dark:hover:bg-blue-800 transition-colors">
+                                        AsyncAPI Example
+                                    </button>
+                                    <button type="button" 
+                                            onclick="fillExampleUrl('https://raw.githubusercontent.com/asyncapi/spec/master/examples/slack-rtm.yml')"
+                                            class="text-xs px-2 py-1 bg-blue-50 dark:bg-blue-900 text-blue-600 dark:text-blue-300 rounded hover:bg-blue-100 dark:hover:bg-blue-800 transition-colors">
+                                        Slack RTM
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button onclick="loadSchemaFromUrl()" 
+                                    id="loadSchemaBtn"
+                                    class="flex-1 inline-flex justify-center items-center px-3 py-2 border border-transparent text-xs font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50">
+                                <span id="loadSchemaBtnText" class="flex items-center">
+                                    <i class="fas fa-download mr-1"></i>
+                                    Load Schema
+                                </span>
+                                <span id="loadSchemaSpinner" class="hidden">
+                                    <i class="fas fa-spinner fa-spin mr-1"></i>
+                                    Loading...
+                                </span>
+                            </button>
+                            <button onclick="useDefaultSchema()" 
+                                    class="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 text-xs font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+                                <i class="fas fa-home mr-1"></i>
+                                Default
+                            </button>
+                        </div>
+                        <div id="currentSchemaInfo" class="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 rounded p-2 border border-gray-200 dark:border-gray-600">
+                            <div class="flex items-center">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                <span id="currentSchemaText">Loading default schema...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Message Selection Card -->
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+                    <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                        <h2 class="text-lg font-medium text-gray-900 dark:text-white flex items-center">
+                            <i class="fas fa-list text-primary-500 mr-2"></i>
+                            Message Selection
+                        </h2>
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Choose a message type to validate</p>
+                    </div>
+                    <div class="px-6 py-4">
+                        <label for="messageSelect" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Message Type</label>
+                        <select id="messageSelect" 
+                                class="mt-1 block w-full pl-3 pr-10 py-2 text-base border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-primary-500 focus:border-primary-500 rounded-md">
+                            <option value="">Select a message type...</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Schema Information Card -->
+                <!-- Removed schema info card -->
+            </div>
+
+            <!-- Right Panel - Validation -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Validation Results -->
+                <div id="validationResult" class="hidden bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+                    <div class="px-6 py-4">
+                        <!-- Results will be dynamically inserted here -->
+                    </div>
+                </div>
+
+                <!-- Message Payload Card -->
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+                    <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <h2 class="text-lg font-medium text-gray-900 dark:text-white flex items-center">
+                                    <i class="fas fa-edit text-primary-500 mr-2"></i>
+                                    Message Payload
+                                </h2>
+                                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Enter or generate your message payload</p>
+                            </div>
+                            <div class="flex space-x-2">
+                                <button onclick="formatJson()" 
+                                        class="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-xs font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+                                    <i class="fas fa-indent mr-1"></i>
+                                    Format
+                                </button>
+                                <button onclick="clearForm()" 
+                                        class="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-xs font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+                                    <i class="fas fa-trash mr-1"></i>
+                                    Clear
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="px-6 py-4">
+                        <div id="editor-container"></div>
+                    </div>
+                </div>
+
+                <!-- Validation Controls -->
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+                    <div class="px-6 py-4">
+                        <button id="validateBtn" 
+                                onclick="validateMessage()" 
+                                class="w-full flex justify-center items-center px-4 py-3 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <span id="validateBtnText" class="flex items-center">
+                                <i class="fas fa-check-circle mr-2"></i>
+                                Validate Message
+                            </span>
+                            <span id="loadingSpinner" class="hidden">
+                                <i class="fas fa-spinner fa-spin mr-2"></i>
+                                Validating...
+                            </span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 mt-auto">
+        <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center">
+                <div class="text-sm text-gray-500 dark:text-gray-400">
+                    AsyncAPI Message Validator v1.0.0
+                </div>
+                <div class="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
+                    <span class="flex items-center">
+                        <i class="fas fa-code mr-1"></i>
+                        Built with AsyncAPI Validator
+                    </span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="/js/validator.js"></script>
+</body>
+</html> 
