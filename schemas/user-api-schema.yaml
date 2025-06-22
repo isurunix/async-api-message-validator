@@ -1,0 +1,604 @@
+asyncapi: 2.5.0
+info:
+  title: User Management API
+  version: 1.0.0
+  description: This API manages user lifecycle events including registration, updates, and notifications
+  contact: 
+    name: API Support
+    email: support@example.com
+  license: 
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+tags:
+  - name: user
+  - name: notifications
+servers:
+  development:
+    url: localhost:9092
+    protocol: kafka
+    description: Development Kafka server
+  production:
+    url: kafka.example.com:9092
+    protocol: kafka
+    description: Production Kafka server
+channels:
+  user.events:
+    description: Channel for user lifecycle events
+    publish:
+      operationId: publishUserEvents
+      description: Publish user lifecycle events
+      message:
+        oneOf:
+          - $ref: "#/components/messages/UserSignedUp"
+          - $ref: "#/components/messages/UserUpdated"
+          - $ref: "#/components/messages/UserDeleted"
+
+    subscribe:
+      operationId: subscribeUserEvents
+      description: Subscribe to user lifecycle events and notifications
+      message:
+        oneOf:
+          - $ref: "#/components/messages/UserSignedUpSub"
+          - $ref: "#/components/messages/UserUpdatedSub"
+          - $ref: "#/components/messages/UserDeletedSub"
+          - $ref: "#/components/messages/UserNotification"
+          - $ref: "#/components/messages/WelcomeEmail"
+          - $ref: "#/components/messages/AccountActivated"
+
+defaultContentType: application/json
+
+components:
+  messages:
+    UserSignedUp:
+      title: User Sign Up Event - Triggered when a new user registers
+      contentType: application/json
+      messageId: userSignedUp
+      traits:
+        - headers:
+            $ref: "#/components/schemas/MessageHeaders"
+      payload:
+        type: object
+        allOf:
+          - $ref: "#/components/schemas/MessageHeaders"
+          - $ref: "#/components/schemas/UserSignedUpPayload"
+    
+    UserSignedUpSub:
+      title: User Sign Up Event - Triggered when a new user registers
+      contentType: application/json
+      messageId: userSignedUpSub
+      traits:
+        - headers:
+            $ref: "#/components/schemas/MessageHeaders"
+      payload:
+        type: object
+        allOf:
+          - $ref: "#/components/schemas/MessageHeaders"
+          - $ref: "#/components/schemas/UserSignedUpPayload"
+
+    UserUpdated:
+      title: User Profile Update Event - Triggered when user profile is modified
+      contentType: application/json
+      messageId: userUpdated
+      traits:
+        - headers:
+            $ref: "#/components/schemas/MessageHeaders"
+      payload:
+        type: object
+        allOf:
+          - $ref: "#/components/schemas/MessageHeaders"
+          - $ref: "#/components/schemas/UserUpdatedPayload"
+
+    UserUpdatedSub:
+      title: User Profile Update Event - Triggered when user profile is modified
+      contentType: application/json
+      messageId: userUpdatedSub
+      traits:
+        - headers:
+            $ref: "#/components/schemas/MessageHeaders"
+      payload:
+        type: object
+        allOf:
+          - $ref: "#/components/schemas/MessageHeaders"
+          - $ref: "#/components/schemas/UserUpdatedPayload"
+
+    UserDeleted:
+      title: User Account Deletion Event - Triggered when user account is deleted
+      contentType: application/json
+      messageId: userDeleted
+      traits:
+        - headers:
+            $ref: "#/components/schemas/MessageHeaders"
+      payload:
+        type: object
+        allOf:
+          - $ref: "#/components/schemas/MessageHeaders"
+          - $ref: "#/components/schemas/UserDeletedPayload"
+
+    UserDeletedSub:
+      title: User Account Deletion Event - Triggered when user account is deleted
+      contentType: application/json
+      messageId: userDeletedSub
+      traits:
+        - headers:
+            $ref: "#/components/schemas/MessageHeaders"
+      payload:
+        type: object
+        allOf:
+          - $ref: "#/components/schemas/MessageHeaders"
+          - $ref: "#/components/schemas/UserDeletedPayload"
+
+    UserNotification:
+      title: General User Notification - System notifications sent to users
+      contentType: application/json
+      messageId: userNotification
+      traits:
+        - headers:
+            $ref: "#/components/schemas/MessageHeaders"
+      payload:
+        type: object
+        allOf:
+          - $ref: "#/components/schemas/MessageHeaders"
+          - $ref: "#/components/schemas/NotificationPayload"
+
+    WelcomeEmail:
+      title: Welcome Email Event - Triggered to send welcome email to new users
+      contentType: application/json
+      messageId: welcomeEmail
+      traits:
+        - headers:
+            $ref: "#/components/schemas/MessageHeaders"
+      payload:
+        type: object
+        allOf:
+          - $ref: "#/components/schemas/MessageHeaders"
+          - $ref: "#/components/schemas/EmailPayload"
+
+    AccountActivated:
+      title: Account Activation Event - Triggered when user account is activated
+      contentType: application/json
+      messageId: accountActivated
+      traits:
+        - headers:
+            $ref: "#/components/schemas/MessageHeaders"
+      payload:
+        type: object
+        allOf:
+          - $ref: "#/components/schemas/MessageHeaders"
+          - $ref: "#/components/schemas/AccountActivatedPayload"
+
+  schemas:
+    MessageHeaders:
+      description: Standard message headers for all events
+      type: object
+      required:
+        - id
+        - eventType
+        - source
+        - timestamp
+        - specVersion
+        - contentType
+      properties:
+        id:
+          description: Unique identifier for this message
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        eventType:
+          $ref: "#/components/schemas/EventType"
+        source:
+          description: Source system that published this event
+          type: string
+          example: "user-service"
+        timestamp:
+          description: When the event occurred
+          type: string
+          format: date-time
+          example: "2023-01-15T14:30:00Z"
+        specVersion:
+          description: Version of the message specification
+          type: string
+          example: "1.0"
+        contentType:
+          description: Content type of the message payload
+          type: string
+          enum:
+            - application/json
+
+    EventType:
+      description: Type of user lifecycle event
+      type: string
+      enum:
+        - user.signed_up
+        - user.updated
+        - user.deleted
+        - user.activated
+        - user.notification
+        - user.welcome_email
+
+    User:
+      description: Basic user information
+      type: object
+      required:
+        - id
+        - email
+        - firstName
+        - lastName
+        - createdAt
+        - status
+      properties:
+        id:
+          description: Unique user identifier
+          type: string
+          format: uuid
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        email:
+          description: User's email address
+          type: string
+          format: email
+          example: "john.doe@example.com"
+        firstName:
+          description: User's first name
+          type: string
+          example: "John"
+        lastName:
+          description: User's last name
+          type: string
+          example: "Doe"
+        phoneNumber:
+          description: User's phone number
+          type: string
+          example: "+1-555-123-4567"
+        dateOfBirth:
+          description: User's date of birth
+          type: string
+          format: date
+          example: "1990-01-15"
+        createdAt:
+          description: When the user account was created
+          type: string
+          format: date-time
+          example: "2023-01-15T14:30:00Z"
+        updatedAt:
+          description: When the user account was last updated
+          type: string
+          format: date-time
+          example: "2023-01-20T10:15:00Z"
+        status:
+          $ref: "#/components/schemas/UserStatus"
+        preferences:
+          $ref: "#/components/schemas/UserPreferences"
+        address:
+          $ref: "#/components/schemas/Address"
+
+    UserStatus:
+      description: Current status of the user account
+      type: string
+      enum:
+        - active
+        - inactive
+        - pending
+        - suspended
+        - deleted
+
+    UserPreferences:
+      description: User's account preferences
+      type: object
+      properties:
+        emailNotifications:
+          description: Whether user wants to receive email notifications
+          type: boolean
+          default: true
+        smsNotifications:
+          description: Whether user wants to receive SMS notifications
+          type: boolean
+          default: false
+        newsletter:
+          description: Whether user is subscribed to newsletter
+          type: boolean
+          default: false
+        language:
+          description: User's preferred language
+          type: string
+          enum:
+            - en
+            - es
+            - fr
+            - de
+            - it
+          default: en
+        timezone:
+          description: User's timezone
+          type: string
+          example: "America/New_York"
+
+    Address:
+      description: Physical address information
+      type: object
+      required:
+        - street
+        - city
+        - country
+        - postalCode
+      properties:
+        street:
+          description: Street address
+          type: string
+          example: "123 Main Street"
+        city:
+          description: City name
+          type: string
+          example: "New York"
+        state:
+          description: State or province
+          type: string
+          example: "NY"
+        country:
+          description: Country code (ISO 3166-1 alpha-2)
+          type: string
+          pattern: "^[A-Z]{2}$"
+          example: "US"
+        postalCode:
+          description: Postal or ZIP code
+          type: string
+          example: "10001"
+
+    UserSignedUpPayload:
+      description: Payload for user sign up events
+      type: object
+      required:
+        - user
+        - registrationSource
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        registrationSource:
+          description: How the user registered
+          type: string
+          enum:
+            - web
+            - mobile
+            - api
+            - social_google
+            - social_facebook
+            - social_twitter
+        referralCode:
+          description: Referral code used during registration
+          type: string
+          example: "FRIEND2023"
+        ipAddress:
+          description: IP address of registration
+          type: string
+          example: "192.168.1.1"
+        userAgent:
+          description: User agent string from registration
+          type: string
+          example: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+
+    UserUpdatedPayload:
+      description: Payload for user profile update events
+      type: object
+      required:
+        - userId
+        - updatedFields
+        - previousValues
+      properties:
+        userId:
+          description: ID of the updated user
+          type: string
+          format: uuid
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        updatedFields:
+          description: Fields that were updated
+          type: array
+          items:
+            type: string
+          example: ["email", "firstName", "preferences.emailNotifications"]
+        previousValues:
+          description: Previous values of updated fields
+          type: object
+          example:
+            email: "old.email@example.com"
+            firstName: "OldName"
+        newValues:
+          description: New values of updated fields
+          type: object
+          example:
+            email: "new.email@example.com"
+            firstName: "NewName"
+        updatedBy:
+          description: Who performed the update
+          type: string
+          enum:
+            - user
+            - admin
+            - system
+
+    UserDeletedPayload:
+      description: Payload for user deletion events
+      type: object
+      required:
+        - userId
+        - deletionReason
+        - deletedAt
+      properties:
+        userId:
+          description: ID of the deleted user
+          type: string
+          format: uuid
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        email:
+          description: Email of the deleted user (for reference)
+          type: string
+          format: email
+          example: "deleted.user@example.com"
+        deletionReason:
+          description: Reason for account deletion
+          type: string
+          enum:
+            - user_request
+            - admin_action
+            - inactivity
+            - policy_violation
+            - gdpr_request
+        deletedAt:
+          description: When the account was deleted
+          type: string
+          format: date-time
+          example: "2023-01-20T16:45:00Z"
+        deletedBy:
+          description: Who initiated the deletion
+          type: string
+          example: "admin-user-id"
+        dataRetentionDays:
+          description: How many days user data will be retained
+          type: integer
+          example: 30
+
+    NotificationPayload:
+      description: Payload for general user notifications
+      type: object
+      required:
+        - userId
+        - notificationType
+        - title
+        - message
+      properties:
+        userId:
+          description: Target user ID
+          type: string
+          format: uuid
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        notificationType:
+          description: Type of notification
+          type: string
+          enum:
+            - info
+            - warning
+            - error
+            - success
+            - security_alert
+            - system_maintenance
+        title:
+          description: Notification title
+          type: string
+          example: "Account Security Alert"
+        message:
+          description: Notification message
+          type: string
+          example: "We noticed a login from a new device"
+        priority:
+          description: Notification priority level
+          type: string
+          enum:
+            - low
+            - medium
+            - high
+            - critical
+          default: medium
+        channels:
+          description: Channels to send notification through
+          type: array
+          items:
+            type: string
+            enum:
+              - email
+              - sms
+              - push
+              - in_app
+        expiresAt:
+          description: When this notification expires
+          type: string
+          format: date-time
+          example: "2023-01-25T14:30:00Z"
+        actionUrl:
+          description: URL for notification action
+          type: string
+          format: uri
+          example: "https://app.example.com/security"
+
+    EmailPayload:
+      description: Payload for email-related events
+      type: object
+      required:
+        - userId
+        - emailType
+        - recipient
+        - subject
+      properties:
+        userId:
+          description: Target user ID
+          type: string
+          format: uuid
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        emailType:
+          description: Type of email being sent
+          type: string
+          enum:
+            - welcome
+            - verification
+            - password_reset
+            - newsletter
+            - notification
+        recipient:
+          description: Email recipient
+          type: string
+          format: email
+          example: "user@example.com"
+        subject:
+          description: Email subject line
+          type: string
+          example: "Welcome to Our Platform!"
+        templateId:
+          description: Email template identifier
+          type: string
+          example: "welcome_v2"
+        templateVariables:
+          description: Variables to populate in email template
+          type: object
+          example:
+            firstName: "John"
+            activationLink: "https://app.example.com/activate?token=abc123"
+        scheduledFor:
+          description: When email should be sent (for scheduled emails)
+          type: string
+          format: date-time
+          example: "2023-01-15T15:00:00Z"
+
+    AccountActivatedPayload:
+      description: Payload for account activation events
+      type: object
+      required:
+        - userId
+        - activatedAt
+        - activationMethod
+      properties:
+        userId:
+          description: ID of the activated user
+          type: string
+          format: uuid
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        activatedAt:
+          description: When the account was activated
+          type: string
+          format: date-time
+          example: "2023-01-15T16:00:00Z"
+        activationMethod:
+          description: How the account was activated
+          type: string
+          enum:
+            - email_verification
+            - admin_approval
+            - phone_verification
+            - automatic
+        activationToken:
+          description: Token used for activation (if applicable)
+          type: string
+          example: "act_1234567890abcdef"
+        ipAddress:
+          description: IP address of activation
+          type: string
+          example: "192.168.1.1"
+        userAgent:
+          description: User agent string from activation
+          type: string
+          example: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
